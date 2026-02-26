@@ -24,6 +24,12 @@ export async function fetchEvents(params: {city?: string; category?: string}) {
   return (await res.json()) as EventDto[];
 }
 
+export async function fetchEvent(eventId: number) {
+  const res = await fetch(`${API_BASE}/events/${eventId}`);
+  if (!res.ok) throw new Error('Failed to load event');
+  return (await res.json()) as EventDto;
+}
+
 export async function fetchSeats(eventId: number) {
   const res = await fetch(`${API_BASE}/events/${eventId}/seats`);
   if (!res.ok) throw new Error('Failed to load seats');
@@ -56,3 +62,30 @@ export async function confirm(reservationId: string, userId: number, paymentRefe
   return (await res.json()) as number;
 }
 
+export async function cancel(reservationId: string, userId: number) {
+  const res = await fetch(`${API_BASE}/bookings/cancel`, {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({reservationId, userId}),
+  });
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({message: 'Failed to cancel reservation'}));
+    throw new Error(errorData.message || 'Failed to cancel reservation');
+  }
+  return (await res.json()) as boolean;
+}
+
+export type BookingDto = {
+  id: number;
+  userId: number;
+  eventId: number;
+  seatIds: number[];
+  status: string;
+  bookedAt: string;
+};
+
+export async function getBooking(bookingId: number) {
+  const res = await fetch(`${API_BASE}/bookings/${bookingId}`);
+  if (!res.ok) throw new Error('Failed to load booking');
+  return (await res.json()) as BookingDto;
+}

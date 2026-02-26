@@ -1,14 +1,14 @@
 import React, {useEffect, useMemo, useState} from 'react';
-import {View, Text, TouchableOpacity, Button, ActivityIndicator} from 'react-native';
+import {View, Text, Pressable, Button, ActivityIndicator} from 'react-native';
 import {NativeStackScreenProps} from '@react-navigation/native-stack';
 import {RootStackParamList} from '../navigation/AppNavigator';
-import {fetchSeats, reserve, confirm, SeatDto} from '../api/client';
+import {fetchSeats, reserve, confirm, cancel, SeatDto} from '../api/client';
 import {useAppDispatch, useAppSelector} from '../store';
 import {selectSeat, deselectSeat, setReservation, clearReservation} from '../store/slices/bookingSlice';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'SeatSelection'>;
 
-export default function SeatSelectionScreen({route}: Props) {
+export default function SeatSelectionScreen({route, navigation}: Props) {
   const {eventId} = route.params;
   const dispatch = useAppDispatch();
   const booking = useAppSelector(s => s.booking);
@@ -55,10 +55,21 @@ export default function SeatSelectionScreen({route}: Props) {
         const resp = await reserve(eventId, 1, booking.selectedSeatIds);
         dispatch(setReservation({reservationId: resp.reservationId, expiresAt: new Date(resp.expiresAt).getTime()}));
       } else {
-        await confirm(booking.reservationId, 1, 'PAY-PLACEHOLDER');
+        const bookingId = await confirm(booking.reservationId, 1, 'PAY-PLACEHOLDER');
         dispatch(clearReservation());
-        alert('Booking Confirmed!');
-        // Refresh seats
+        navigation.navigate('BookingDetails', {bookingId});
+      }
+    } catch (e: any) {
+      setError(e.message);
+    }
+  };
+
+  const handleCancel = async () => {
+    setError(null);
+    try {
+      if (booking.reservationId) {
+        await cancel(booking.reservationId, 1);
+        dispatch(clearReservation());
         const updated = await fetchSeats(eventId);
         setSeats(updated);
       }
@@ -82,7 +93,7 @@ export default function SeatSelectionScreen({route}: Props) {
             const selected = booking.selectedSeatIds.includes(s.id);
             const disabled = s.status !== 'AVAILABLE' && !selected;
             return (
-              <TouchableOpacity
+              <Pressable
                 key={s.id}
                 onPress={() => {
                   if (selected) dispatch(deselectSeat(s.id));
@@ -92,9 +103,10 @@ export default function SeatSelectionScreen({route}: Props) {
                   width: 28, height: 28, margin: 2,
                   backgroundColor: selected ? '#1976d2' : disabled ? '#ccc' : '#8bc34a',
                   alignItems: 'center', justifyContent: 'center', borderRadius: 4,
+                  cursor: disabled ? 'not-allowed' as any : 'pointer' as any,
                 }}>
                 <Text style={{fontSize: 10, color: '#fff'}}>{s.seatNumber}</Text>
-              </TouchableOpacity>
+              </Pressable>
             );
           })}
         </View>
@@ -105,6 +117,11 @@ export default function SeatSelectionScreen({route}: Props) {
           onPress={handleAction}
         />
       </View>
+      {booking.reservationId && (
+        <View style={{marginTop: 8}}>
+          <Button title="Cancel Hold" onPress={handleCancel} />
+        </View>
+      )}
     </View>
   );
 }

@@ -11,6 +11,18 @@ export default function BrowseScreen({navigation}: Props) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const formatDate = (s?: string) => {
+    if (!s) return '';
+    const d = new Date(s);
+    if (!isNaN(d.getTime())) return d.toLocaleString();
+    const withZ = s.endsWith('Z') ? s : s + 'Z';
+    const d2 = new Date(withZ);
+    if (!isNaN(d2.getTime())) return d2.toLocaleString();
+    const trimmed = s.replace(/\.(\d{3})\d+/, '.$1');
+    const d3 = new Date(trimmed);
+    if (!isNaN(d3.getTime())) return d3.toLocaleString();
+    return '';
+  };
   useEffect(() => {
     setLoading(true);
     fetchEvents({})
@@ -31,11 +43,13 @@ export default function BrowseScreen({navigation}: Props) {
           onPress={() => navigation.navigate('EventDetails', {eventId: item.id})}
           style={{padding: 16, borderBottomWidth: 1, borderBottomColor: '#eee'}}>
           <Text style={{fontSize: 16, fontWeight: '600'}}>{item.title}</Text>
-          <Text>{item.category} • {item.city}</Text>
-          <Text>{new Date(item.eventDateTime).toLocaleString()}</Text>
+          {(() => {
+            const parts = [item.category, item.city].filter(p => p && String(p).trim().length > 0);
+            return parts.length ? <Text>{parts.join(' • ')}</Text> : null;
+          })()}
+          {formatDate(item.eventDateTime) ? <Text>{formatDate(item.eventDateTime)}</Text> : null}
         </TouchableOpacity>
       )}
     />
   );
 }
-
