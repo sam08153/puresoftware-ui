@@ -1,0 +1,15 @@
+# dependencies
+node_modules/
+# builds
+dist/
+build/
+.expo/
+.expo-shared/
+.fakehome/
+# env/secrets
+.env
+.env.*
+# logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
